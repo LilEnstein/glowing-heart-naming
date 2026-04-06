@@ -9,8 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const uiContainer = document.getElementById('ui-container');
   const nameInput = document.getElementById('name-input');
   const sendBtn = document.getElementById('send-btn');
-  const nameOverlay = document.getElementById('name-overlay');
-  const floatingName = document.getElementById('floating-name');
 
   // Check URL parameters for direct share view
   const urlParams = new URLSearchParams(window.location.search);
@@ -43,32 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. Fade out UI
     uiContainer.classList.add('fade-out');
 
-    // 2. Instruct ThreeJS to form the heart
-    startHeartAnimation();
-
-    // 3. Typewriter effect for the floating name
-    setTimeout(() => {
-      nameOverlay.classList.remove('hidden');
-      floatingName.textContent = '';
-      floatingName.classList.add('typing');
-      
-      let index = 0;
-      const typingSpeed = 150; // ms per char
-
-      function typeChar() {
-        if (index < name.length) {
-          floatingName.textContent += name.charAt(index);
-          index++;
-          setTimeout(typeChar, typingSpeed);
-        } else {
-            // Typing finished, remove cursor class after brief delay
-            setTimeout(() => {
-                floatingName.classList.remove('typing');
-            }, 1000);
-        }
-      }
-      typeChar();
-
-    }, 1500); // Wait for particles to somewhat gather
+    // 2. Instruct ThreeJS to form the heart and render the 3D text
+    startHeartAnimation(name);
   }
 });
