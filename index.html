@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glowing Heart Cinematic Experience</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app">
+      <!-- 3D Canvas Container -->
+      <canvas id="webgl-canvas"></canvas>
+      
+      <!-- UI Overlay -->
+      <div id="ui-container" class="ui-overlay">
+        <div class="glass-panel">
+          <h1>Send a Heart</h1>
+          <p>Enter a name to create a glowing heartbeat.</p>
+          <div class="input-group">
+            <input type="text" id="name-input" placeholder="Someone special..." autocomplete="off">
+            <button id="send-btn">Send Heart</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Floating Name Overlay (Shown after animation starts) -->
+      <div id="name-overlay" class="name-overlay hidden">
+        <h2 id="floating-name"></h2>
+      </div>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
