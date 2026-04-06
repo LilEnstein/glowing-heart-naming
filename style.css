@@ -2,7 +2,22 @@
   --font-body: 'Inter', sans-serif;
   --font-display: 'Inter', sans-serif;
   --bg-color: #0D0D12;
-  --glow-color: #ff66b2;
+  --bg-gradient-inner: #1A1A24;
+  --bg-gradient-outer: #0D0D12;
+  
+  --primary-core: #FF4D6D;
+  --primary-intense: #FF1F5A;
+  --primary-soft: #FF8FA3;
+  
+  --secondary-cute-1: #FFD6E0;
+  --secondary-cute-2: #FFE4EC;
+  --secondary-cute-3: #FFF0F5;
+  
+  --accent-purple: #A78BFA;
+  --accent-blue: #7DD3FC;
+  --accent-pink: #F9A8D4;
+  
+  --glow-color: var(--primary-core);
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.15);
 }
@@ -16,7 +31,7 @@
 body {
   margin: 0;
   overflow: hidden;
-  background-color: var(--bg-color);
+  background: radial-gradient(circle at center, var(--bg-gradient-inner), var(--bg-gradient-outer));
   color: #fff;
   font-family: var(--font-body);
   display: flex;
@@ -39,6 +54,18 @@ body {
   width: 100%;
   height: 100%;
   z-index: 1;
+}
+
+/* Cinematic Glow Class */
+.ly-tuan-glow {
+  color: var(--primary-core);
+  text-shadow:
+    0 0 5px var(--primary-core),
+    0 0 10px var(--primary-core),
+    0 0 20px var(--primary-intense),
+    0 0 40px var(--primary-intense),
+    0 0 80px var(--primary-soft);
+  mix-blend-mode: screen;
 }
 
 /* UI Overlay */

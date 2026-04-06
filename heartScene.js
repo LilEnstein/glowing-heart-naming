@@ -4,10 +4,8 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
-let scene, camera, renderer, composer, controls;
-// Heart particles
+let scene, camera, renderer, composer, controls, bloomPass;
 let particleSystem, particlePositions, particleColors, particleMetadata;
-// Text particles
 let textParticleSystem, textParticleMetadata;
 
 const particlesCount = 4000;
@@ -33,18 +31,18 @@ export const state = {
 export function initThreeJS(canvasElement) {
   // Scene Setup
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x0D0D12, 0.015);
+  // Removed fog to allow CSS radial gradient to shine through
 
   // Camera Setup
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
   camera.position.z = 120;
   camera.position.y = 10; 
 
-  // Renderer Setup
-  renderer = new THREE.WebGLRenderer({ canvas: canvasElement, antialias: true, alpha: false });
+  // Renderer Setup - ENABLE ALPHA for CSS Background
+  renderer = new THREE.WebGLRenderer({ canvas: canvasElement, antialias: true, alpha: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x0D0D12);
+  renderer.setClearColor(0x000000, 0); // Transparent to show CSS radial-gradient
 
   // OrbitControls
   controls = new OrbitControls(camera, renderer.domElement);
@@ -54,32 +52,31 @@ export function initThreeJS(canvasElement) {
   controls.minDistance = 50;
   controls.maxDistance = 200;
 
-  // Lighting (For glowing effects)
+  // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
 
-  const pointLight1 = new THREE.PointLight(0xff66b2, 2, 100);
+  const pointLight1 = new THREE.PointLight(0xFF4D6D, 2, 100);
   pointLight1.position.set(20, 20, 20);
   scene.add(pointLight1);
   
-  const pointLight2 = new THREE.PointLight(0x00d2ff, 1.5, 100);
+  const pointLight2 = new THREE.PointLight(0x7DD3FC, 1.5, 100);
   pointLight2.position.set(-20, -10, -20);
   scene.add(pointLight2);
 
-  // Post-Processing (Bloom) - Strength increased for vibrant colors
+  // Cinematic Post-Processing (Ly Tuan setup)
   const renderScene = new RenderPass(scene, camera);
-  const bloomPass = new UnrealBloomPass(
+  bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    2.2, // strength (vibrant glowing)
-    0.8, // radius
-    0.15  // threshold
+    1.6, // strength
+    0.4, // tight radius
+    0.85 // high threshold (only over-exposed pixels will bloom)
   );
   
   composer = new EffectComposer(renderer);
   composer.addPass(renderScene);
   composer.addPass(bloomPass);
 
-  // Create Heart Particles
   createParticles();
 
   // Event Listeners
@@ -87,7 +84,6 @@ export function initThreeJS(canvasElement) {
   window.addEventListener('mousemove', onMouseMove, false);
   window.addEventListener('touchmove', onTouchMove, { passive: true });
 
-  // Start Loop
   animate();
 }
 
@@ -98,19 +94,16 @@ function createTextParticles(name) {
     textParticleSystem.material.dispose();
   }
 
-  // 1. Create Canvas to render text 2D
   const canvas = document.createElement('canvas');
   const size = 512;
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   
-  // 2. Format and draw text
   ctx.clearRect(0, 0, size, size);
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  // Responsive font size based on string length
   let fontSize = 80;
   if(name.length > 8) fontSize = 60;
   if(name.length > 12) fontSize = 45;
@@ -118,17 +111,15 @@ function createTextParticles(name) {
   ctx.font = `bold ${fontSize}px 'Inter', sans-serif`;
   ctx.fillText(name, size / 2, size / 2);
   
-  // 3. Extract Pixel Alphas
   const imgData = ctx.getImageData(0, 0, size, size).data;
   const textCoords = [];
   
-  const density = 2; // sample every N pixels (lower = more particles)
+  const density = 3; 
   for (let y = 0; y < size; y += density) {
     for (let x = 0; x < size; x += density) {
       const idx = (y * size + x) * 4;
       const alpha = imgData[idx + 3];
       if (alpha > 128) {
-        // Map 512x512 canvas coordinates to 3D center space
         const posX = (x - size / 2) * 0.15;
         const posY = -(y - size / 2) * 0.15; 
         textCoords.push(new THREE.Vector3(posX, posY, 0));
@@ -139,18 +130,17 @@ function createTextParticles(name) {
   const count = textCoords.length;
   if (count === 0) return;
   
-  // 4. Construct Geometry
   const geometry = new THREE.BufferGeometry();
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
   textParticleMetadata = [];
   
-  const baseColor = new THREE.Color(0xffffff);
+  // Over-expose text to bypass 0.85 threshold
+  const baseColor = new THREE.Color(0xFFFFFF).multiplyScalar(2.5);
 
   for (let i = 0; i < count; i++) {
     const target = textCoords[i];
     
-    // Spawn points randomly across scene
     const startX = (Math.random() - 0.5) * 600;
     const startY = (Math.random() - 0.5) * 600;
     const startZ = (Math.random() - 0.5) * 600;
@@ -159,7 +149,6 @@ function createTextParticles(name) {
     positions[i*3 + 1] = startY;
     positions[i*3 + 2] = startZ;
     
-    // Make text purely bright white with slight variations for glow depth
     colors[i*3] = baseColor.r;
     colors[i*3+1] = baseColor.g;
     colors[i*3+2] = baseColor.b;
@@ -169,7 +158,7 @@ function createTextParticles(name) {
       targetY: target.y,
       targetZ: target.z,
       speed: 0.03 + Math.random() * 0.04,
-      delay: Math.random() * 1.5,     // delay assembly for cinematic effect
+      delay: Math.random() * 1.5,
       noiseOffset: Math.random() * Math.PI * 2
     });
   }
@@ -177,26 +166,25 @@ function createTextParticles(name) {
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   
-  // 5. Build Material
   const txCanvas = document.createElement('canvas');
   txCanvas.width = 32; txCanvas.height = 32;
   const ctxTx = txCanvas.getContext('2d');
   const gradient = ctxTx.createRadialGradient(16, 16, 0, 16, 16, 16);
   gradient.addColorStop(0, 'rgba(255,255,255,1)');
-  gradient.addColorStop(0.3, 'rgba(255,180,255,0.8)'); // hint of pink aura
+  gradient.addColorStop(0.3, 'rgba(255,77,109,0.8)'); // Ly Tuan Primary Glow #FF4D6D
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
   ctxTx.fillStyle = gradient;
   ctxTx.fillRect(0, 0, 32, 32);
   const texture = new THREE.CanvasTexture(txCanvas);
 
   const material = new THREE.PointsMaterial({
-    size: 1.5,
+    size: 1.6,
     vertexColors: true,
     map: texture,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     transparent: true,
-    opacity: 1.0
+    opacity: 0.95
   });
 
   textParticleSystem = new THREE.Points(geometry, material);
@@ -209,20 +197,21 @@ function createParticles() {
   const geometry = new THREE.BufferGeometry();
   particlePositions = new Float32Array(particlesCount * 3);
   particleColors = new Float32Array(particlesCount * 3);
-  particleMetadata = []; // Keep track of base t, speed, random offset
+  particleMetadata = []; 
 
-  const colorPink = new THREE.Color(0xff66b2);
-  const colorPurple = new THREE.Color(0xa200ff);
-  const colorBlue = new THREE.Color(0x00d2ff);
+  // Ly Tuan Core Colors - multiplied to bypass 0.85 bloom threshold
+  const colorPrimaryNode = new THREE.Color(0xFF4D6D).multiplyScalar(2.0); // main core
+  const colorHotNode = new THREE.Color(0xFF1F5A).multiplyScalar(2.5); // intense
+  const colorPurpleAccent = new THREE.Color(0xA78BFA).multiplyScalar(1.8);
+  const colorBlueAccent = new THREE.Color(0x7DD3FC).multiplyScalar(1.8);
 
   for (let i = 0; i < particlesCount; i++) {
     const t = Math.random() * Math.PI * 2;
     
     const isCore = Math.random() > 0.4;
     const baseScale = isCore ? 1.5 + (Math.random() * 0.1) : 1.2 + (Math.random() * 0.5);
-    const zDepthMultiplier = isCore ? 1.0 : 3.0 + Math.random() * 3.0; // wider scatter
+    const zDepthMultiplier = isCore ? 1.0 : 3.0 + Math.random() * 3.0; 
     
-    // Hidden initialization radially
     const randomRadius = 300 + Math.random() * 200;
     const randomAngle1 = Math.random() * Math.PI * 2;
     const randomAngle2 = Math.random() * Math.PI * 2;
@@ -231,11 +220,13 @@ function createParticles() {
     particlePositions[i * 3 + 1] = randomRadius * Math.sin(randomAngle1) * Math.sin(randomAngle2);
     particlePositions[i * 3 + 2] = randomRadius * Math.cos(randomAngle1);
 
-    // Color logic
-    let mixedColor = colorPink.clone();
-    if (!isCore) {
-      if(Math.random() > 0.5) mixedColor = colorPurple.clone();
-      else mixedColor = colorBlue.clone();
+    // Color distribution
+    let mixedColor = colorPrimaryNode.clone();
+    if (isCore && Math.random() > 0.7) {
+      mixedColor = colorHotNode.clone();
+    } else if (!isCore) {
+      if(Math.random() > 0.5) mixedColor = colorPurpleAccent.clone();
+      else mixedColor = colorBlueAccent.clone();
     }
     
     particleColors[i * 3] = mixedColor.r;
@@ -262,20 +253,20 @@ function createParticles() {
   const ctx = txCanvas.getContext('2d');
   const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
   gradient.addColorStop(0, 'rgba(255,255,255,1)');
-  gradient.addColorStop(0.2, 'rgba(255,255,255,0.8)');
+  gradient.addColorStop(0.2, 'rgba(255,77,109,0.5)'); // base hue
   gradient.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 32, 32);
   const texture = new THREE.CanvasTexture(txCanvas);
 
   const material = new THREE.PointsMaterial({
-    size: 2.2,
+    size: 2.0,
     vertexColors: true,
     map: texture,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     transparent: true,
-    opacity: 0.8
+    opacity: 0.65 // Kept slightly subtle, letting over-exposure bloom handle the magic
   });
 
   particleSystem = new THREE.Points(geometry, material);
@@ -314,26 +305,23 @@ function animate() {
   const dt = clock.getDelta();
 
   controls.update();
-
-  // Raycaster prep for mouse repulsion
   state.raycaster.setFromCamera(state.mouse, camera);
   let mouseWorldPos = new THREE.Vector3();
   state.raycaster.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1), 0), mouseWorldPos);
 
-  // Animate Text Particles
+  let beat = 0; // scope globally
+
   if (state.active && textParticleSystem) {
     state.introTime += 0.016; 
     const tPositions = textParticleSystem.geometry.attributes.position.array;
     
     for (let i = 0; i < textParticleMetadata.length; i++) {
         const meta = textParticleMetadata[i];
-        
         if (state.introTime > meta.delay) {
             let currentX = tPositions[i*3];
             let currentY = tPositions[i*3+1];
             let currentZ = tPositions[i*3+2];
             
-            // Re-assembly towards target with slight floating sin wave
             const floatY = Math.sin(time * 2 + meta.noiseOffset) * 0.5;
             const floatZ = Math.cos(time * 1.5 + meta.noiseOffset) * 0.5;
             
@@ -341,7 +329,6 @@ function animate() {
             let targetY = meta.targetY + floatY;
             let targetZ = meta.targetZ + floatZ;
             
-            // Mouse repulsion for text particles
             if (mouseWorldPos) {
               const dx = targetX - mouseWorldPos.x;
               const dy = targetY - mouseWorldPos.y;
@@ -359,15 +346,12 @@ function animate() {
         }
     }
     textParticleSystem.geometry.attributes.position.needsUpdate = true;
-    
-    // Slow cinematic rotation of entire text
     textParticleSystem.rotation.y = Math.sin(time * 0.3) * 0.2;
   }
 
-  // Animate Heart Particles
   if (particleSystem) {
     const positions = particleSystem.geometry.attributes.position.array;
-    const beat = (Math.sin(time * 5) * 0.1 + Math.sin(time * 5 + 1.5) * 0.05);
+    beat = (Math.sin(time * 5) * 0.1 + Math.sin(time * 5 + 1.5) * 0.05);
     const pulseScale = state.active ? 1.0 + Math.max(0, beat) : 1.0;
 
     for (let i = 0; i < particlesCount; i++) {
@@ -383,7 +367,6 @@ function animate() {
         tTargetPos.y += Math.cos(time * 2.5 + meta.angleOffset) * 0.5;
         tTargetPos.z += meta.depthOffset + Math.sin(time * 3 + meta.angleOffset) * 2.0;
 
-        // Mouse repulsion
         if (mouseWorldPos) {
           const distToMouse = tTargetPos.distanceTo(mouseWorldPos);
           if (distToMouse < 20) {
@@ -415,6 +398,12 @@ function animate() {
     } else {
        particleSystem.rotation.y += 0.005;
     }
+  }
+
+  // Emotional Cinematic Glow Fluctuation - Sync bloom intensity with heartbeat and random noise
+  if (bloomPass) {
+    // base strength 1.6 + heartbeat pulse + tiny organic flicker
+    bloomPass.strength = 1.6 + (Math.max(0, beat) * 4.0) + (Math.sin(time * 12) * 0.05);
   }
 
   composer.render();
