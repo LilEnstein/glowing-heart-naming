@@ -27,7 +27,7 @@ export const state = {
 export function initThreeJS(canvasElement) {
   // Scene Setup
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x020202, 0.02);
+  scene.fog = new THREE.FogExp2(0x0D0D12, 0.02);
 
   // Camera Setup
   camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
@@ -37,15 +37,15 @@ export function initThreeJS(canvasElement) {
   renderer = new THREE.WebGLRenderer({ canvas: canvasElement, antialias: false, alpha: false });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x020202);
+  renderer.setClearColor(0x0D0D12);
 
   // Post-Processing (Bloom)
   const renderScene = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    2.5, // strength
-    0.5, // radius
-    0.1  // threshold
+    1.2, // strength
+    1.0, // radius
+    0.2  // threshold
   );
   
   composer = new EffectComposer(renderer);
@@ -70,9 +70,9 @@ function createParticles() {
   particleColors = new Float32Array(particlesCount * 3);
   particleMetadata = []; // Keep track of base t, speed, random offset
 
-  const colorPrimary = new THREE.Color(0xff2a6d);
-  const colorSecondary = new THREE.Color(0xd91c5c);
-  const colorTertiary = new THREE.Color(0xff7ca3);
+  const colorPrimary = new THREE.Color(0xff66b2); // Gradient Pink / Cute Pink
+  const colorSecondary = new THREE.Color(0xa200ff); // Purple
+  const colorTertiary = new THREE.Color(0x00d2ff); // Blue
 
   for (let i = 0; i < particlesCount; i++) {
     // Distribute particles mainly along the edge, with some scattered inside
